@@ -58,9 +58,6 @@ public class IA implements IJoueur {
         return meilleurCoup;
     }
 
-    /**
-     * Algorithme Minimax avec élagage alpha-beta
-     */
     private int minimax(EscampeBoard plateau, int profondeur, boolean maximisant) {
         if (profondeur == 0 || plateau.estPartieTerminee()) {
             return plateau.evaluerPosition(couleur);
