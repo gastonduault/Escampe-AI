@@ -22,11 +22,15 @@ public class IA implements IJoueur {
     ;
 
     private String getPlacementInitial() {
-        boolean bas = board.coteChoisi(couleur).equals("bas");
+        String positionAdversaire = board.coteChoisi(couleur);
+
+        if(positionAdversaire.equals("vide")) { // on est joueur noir on choisi car le plateau est vide
+            return "E1/F1/A1/E2/C2/A2";
+        }
 
         // Liste des cases autorisées
         List<String> autorise = new ArrayList<>();
-        int[] lignes = bas ? new int[]{1,2} : new int[]{6,5};
+        int[] lignes = positionAdversaire.equals("bas") ? new int[]{1,2} : new int[]{6,5};
         for (char c = 'A'; c <= 'F'; c++) {
             for (int l : lignes) {
                 autorise.add(""+c+l);

@@ -291,13 +291,16 @@ public class EscampeBoard {
         for (int i = 0; i < HAUTEUR; i++) {
             for (int j = 0; j < LARGEUR; j++) {
                 if(board[i][j] == adversaire && (i == 1 || i == 2)) {
-                    System.out.println("L'adversaire a choisi le côté bas");
+                    System.out.println("L'adversaire a choisi le côté haut");
                     return "haut";
+                }
+                else if(board[i][j] == adversaire && (i == 4 || i == 5)) {
+                    System.out.println("L'adversaire a choisi le côté bas");
+                    return "bas";
                 }
             }
         }
-        System.out.println("L'adversaire a choisi le côté haut");
-        return "bas";
+        return "vide";
     }
 
     public boolean appliquerPlacementInitial(String placement, int couleur) {
