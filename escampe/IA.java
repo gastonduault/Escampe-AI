@@ -16,7 +16,7 @@ public class IA implements IJoueur {
     private int couleur;
     private EscampeBoard board;
     private Random random = new Random();
-    private int profondeurMax = 3; // Profondeur de recherche pour l'IA
+    private int profondeurMax = 3;
     private boolean initalized = false;
     private String dernierMouvementEnnemi = "";
     ;
@@ -104,7 +104,7 @@ public class IA implements IJoueur {
             copie.appliquerCoup(coup, couleur);
             int score = minimax(copie, profondeurMax - 1, Integer.MIN_VALUE, Integer.MAX_VALUE, false);
 
-            if (score > meilleurScore) {
+            if (score > meilleurScore) { // si meilleur score on prend cette branche
                 meilleurScore = score;
                 meilleurCoup = coup;
             }
