@@ -7,6 +7,10 @@ package escampe;
 
 import java.util.List;
 import java.util.Random;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 public class IA implements IJoueur {
     private int couleur;
@@ -18,11 +22,63 @@ public class IA implements IJoueur {
     ;
 
     private String getPlacementInitial() {
-        if (board.coteChoisi(couleur).equals("bas")) {
-            return "C1/A2/B1/D2/E1/F2";
-        } else {
-            return "C6/A5/B6/D5/E6/F5";
+        boolean bas = board.coteChoisi(couleur).equals("bas");
+
+        // Liste des cases autorisées
+        List<String> autorise = new ArrayList<>();
+        int[] lignes = bas ? new int[]{1,2} : new int[]{6,5};
+        for (char c = 'A'; c <= 'F'; c++) {
+            for (int l : lignes) {
+                autorise.add(""+c+l);
+            }
         }
+
+        final int N = 200;
+        Random rnd = new Random();
+        String meilleurPlacement = simpleHeuristicPlacement(); // backup si rien de mieux
+        int meilleurScore = Integer.MIN_VALUE;
+
+        for (int iter = 0; iter < N; iter++) {
+            // Choisir une licorne parmi les 12 cases
+            String licorne = autorise.get(rnd.nextInt(autorise.size()));
+
+            // Choisir 5 paladins distincts sur le reste
+            Set<String> rest = new HashSet<>(autorise);
+            rest.remove(licorne);
+            List<String> restList = new ArrayList<>(rest);
+            Collections.shuffle(restList, rnd);
+            List<String> paladins = restList.subList(0, 5);
+
+            // Construire la chaîne de placement
+            StringBuilder sb = new StringBuilder(licorne);
+            for (String p : paladins) sb.append("/").append(p);
+            String placement = sb.toString();
+
+            // Évaluer par Minimax profondeur 2
+            EscampeBoard copie = new EscampeBoard();
+            copie.getBoard();
+            copie.appliquerCoup(placement, couleur);
+            int score = minimax(copie, 3, Integer.MIN_VALUE, Integer.MAX_VALUE, false);
+
+            if (score > meilleurScore) {
+                meilleurScore = score;
+                meilleurPlacement = placement;
+            }
+        }
+
+        return meilleurPlacement;
+    }
+
+    /** Heuristique défensive simple par défaut */
+    private String simpleHeuristicPlacement() {
+        boolean bas = board.coteChoisi(couleur).equals("bas");
+        String licorne = bas ? "C1" : "C6";
+        String p1 = bas ? "B1" : "B6";
+        String p2 = bas ? "D1" : "D6";
+        String p3 = bas ? "B2" : "B5";
+        String p4 = bas ? "D2" : "D5";
+        String p5 = bas ? "C2" : "C5";
+        return String.join("/", licorne, p1, p2, p3, p4, p5);
     }
 
     @Override
