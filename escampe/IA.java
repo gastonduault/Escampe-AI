@@ -21,8 +21,6 @@ public class IA implements IJoueur {
         if (board.coteChoisi(couleur).equals("bas")) {
             return "C1/A2/B1/D2/E1/F2";
         } else {
-            // Noirs placent sur lignes 5-6
-            // Licorne en C6 (ligne 6), paladins autour
             return "C6/A5/B6/D5/E6/F5";
         }
     }
@@ -40,54 +38,132 @@ public class IA implements IJoueur {
         }
         board.afficher();
         List<String> coupsPossibles = board.getCoupsPossibles(couleur, dernierMouvementEnnemi);
-
-        if (coupsPossibles.isEmpty()) {
-            System.out.println("Aucuns coups possible");
-            return "E";
-        }
+        if (coupsPossibles.isEmpty()) return "E";
 
         String meilleurCoup = coupsPossibles.get(0);
-        System.out.println("meilleurCoup : " + meilleurCoup);
-        System.out.println("Nombre de coup possible : " + coupsPossibles);
         int meilleurScore = Integer.MIN_VALUE;
 
-        boolean success = board.appliquerCoup(meilleurCoup, couleur);
-        System.out.println("coup appliqué : " + success);
-        int score = minimax(board, profondeurMax - 1, false);
+        for (String coup : coupsPossibles) {
+            EscampeBoard copie = board.copie();
+            copie.appliquerCoup(coup, couleur);
+            int score = minimax(copie, profondeurMax - 1, Integer.MIN_VALUE, Integer.MAX_VALUE, false);
 
+            if (score > meilleurScore) {
+                meilleurScore = score;
+                meilleurCoup = coup;
+            }
+        }
+
+        board.appliquerCoup(meilleurCoup, couleur);
         return meilleurCoup;
     }
 
-    private int minimax(EscampeBoard plateau, int profondeur, boolean maximisant) {
+    private int minimax(EscampeBoard plateau, int profondeur, int alpha, int beta, boolean maximisant) {
         if (profondeur == 0 || plateau.estPartieTerminee()) {
-            return plateau.evaluerPosition(couleur);
+            return evaluerPositionAvancee(plateau);
         }
 
         if (maximisant) {
             int maxEval = Integer.MIN_VALUE;
-            List<String> coups = plateau.getCoupsPossibles(couleur, this.dernierMouvementEnnemi);
+            List<String> coups = plateau.getCoupsPossibles(couleur, dernierMouvementEnnemi);
 
             for (String coup : coups) {
                 EscampeBoard copie = plateau.copie();
                 copie.appliquerCoup(coup, couleur);
-                int eval = minimax(copie, profondeur - 1, false);
+                int eval = minimax(copie, profondeur - 1, alpha, beta, false);
                 maxEval = Math.max(maxEval, eval);
+                alpha = Math.max(alpha, eval);
+                if (beta <= alpha) break;
             }
-
             return maxEval;
         } else {
             int minEval = Integer.MAX_VALUE;
-            List<String> coups = plateau.getCoupsPossibles(-couleur, this.dernierMouvementEnnemi);
+            List<String> coups = plateau.getCoupsPossibles(-couleur, dernierMouvementEnnemi);
 
             for (String coup : coups) {
                 EscampeBoard copie = plateau.copie();
                 copie.appliquerCoup(coup, -couleur);
-                int eval = minimax(copie, profondeur - 1, true);
+                int eval = minimax(copie, profondeur - 1, alpha, beta, true);
                 minEval = Math.min(minEval, eval);
+                beta = Math.min(beta, eval);
+                if (beta <= alpha) break;
             }
-
             return minEval;
         }
+    }
+
+    private int[] trouverLicorneEnnemie(EscampeBoard plateau) {
+        for (int i = 0; i < EscampeBoard.HAUTEUR; i++) {
+            for (int j = 0; j < EscampeBoard.LARGEUR; j++) {
+                if (plateau.getBoard()[i][j] == (couleur == EscampeBoard.BLANC ?
+                        EscampeBoard.LICORNENOIRE : EscampeBoard.LICORNEBLANCHE)) {
+                    return new int[]{i, j};
+                }
+            }
+        }
+        return null;
+    }
+
+    private int evaluerControleCentral(EscampeBoard plateau) {
+        int score = 0;
+        int[][] zonesCentrales = {{2,2}, {2,3}, {3,2}, {3,3}};
+        for (int[] pos : zonesCentrales) {
+            int piece = plateau.getBoard()[pos[0]][pos[1]];
+            if (piece != EscampeBoard.VIDE) {
+                score += (piece * couleur > 0) ? 3 : -3;
+            }
+        }
+        return score;
+    }
+
+    private int distanceVersLicorne(EscampeBoard plateau, int[] posLicorneEnnemie) {
+        int minDistance = Integer.MAX_VALUE;
+        int[][] board = plateau.getBoard();
+
+        // Type de paladin à rechercher selon la couleur
+        int paladinType = (couleur == EscampeBoard.BLANC) ? EscampeBoard.PALADINBLANC : EscampeBoard.PALADINNOIR;
+
+        for (int i = 0; i < EscampeBoard.HAUTEUR; i++) {
+            for (int j = 0; j < EscampeBoard.LARGEUR; j++) {
+                if (board[i][j] == paladinType) {
+                    // Calcul distance de Manhattan
+                    int distance = Math.abs(i - posLicorneEnnemie[0]) + Math.abs(j - posLicorneEnnemie[1]);
+                    minDistance = Math.min(minDistance, distance);
+                }
+            }
+        }
+
+        return (minDistance == Integer.MAX_VALUE) ? 20 : minDistance; // 20 = valeur de repli
+    }
+
+    // Modification dans evaluerPositionAvancee()
+    private int evaluerPositionAvancee(EscampeBoard plateau) {
+        int score = 0;
+        int[][] board = plateau.getBoard();
+
+        // Valeur des pièces
+        for (int i = 0; i < EscampeBoard.HAUTEUR; i++) {
+            for (int j = 0; j < EscampeBoard.LARGEUR; j++) {
+                int piece = board[i][j];
+                if (piece != EscampeBoard.VIDE) {
+                    // Attribution de valeurs (Licorne > Paladin)
+                    int valeur = (Math.abs(piece) == 2) ? 100 : 10;
+                    score += (piece * couleur > 0) ? valeur : -valeur;
+                }
+            }
+        }
+
+        // Distance à la licorne ennemie
+        int[] posLicorneEnnemie = trouverLicorneEnnemie(plateau);
+        if (posLicorneEnnemie != null) {
+            int distance = distanceVersLicorne(plateau, posLicorneEnnemie);
+            score += (30 - distance * 3); // +30 points si distance=0, décroît linéairement
+        }
+
+        // Contrôle des cases centrales
+        score += evaluerControleCentral(plateau);
+
+        return score;
     }
 
     @Override
