@@ -13,218 +13,54 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class IA implements IJoueur {
-    private int couleur;
-    private EscampeBoard board;
-    private Random random = new Random();
-    private int profondeurMax = 3;
-    private boolean initalized = false;
-    private String dernierMouvementEnnemi = "";
-    ;
 
-    private String getPlacementInitial() {
-        String positionAdversaire = board.coteChoisi(couleur);
+    /* ============================== */
+    /* Constantes et Variables */
+    /* ============================== */
+    private static final int N_INIT = 200;  // Nombre d'itérations pour le placement initial
+    private static final int PROF_INIT = 3; // Profondeur pour l'algorithme minimax
+    private int profondeurMax = PROF_INIT; // Profondeur maximale actuelle pour minimax
 
-        if(positionAdversaire.equals("vide")) { // on est joueur noir on choisi car le plateau est vide
-            return "E1/F1/A1/E2/C2/A2";
-        }
+    private int couleur; // Couleur du joueur (BLANC ou NOIR)
+    private EscampeBoard board; // Représentation du plateau de jeu
+    private final Random random = new Random();
+    private boolean initialized = false; // Indique si le placement initial a été effectué
+    private String dernierMouvementEnnemi = ""; // Dernier mouvement de l'adversaire
 
-        // Liste des cases autorisées
-        List<String> autorise = new ArrayList<>();
-        int[] lignes = positionAdversaire.equals("bas") ? new int[]{1,2} : new int[]{6,5};
-        for (char c = 'A'; c <= 'F'; c++) {
-            for (int l : lignes) {
-                autorise.add(""+c+l);
-            }
-        }
+    // Piece-Square Tables pour la valeur positionnelle des pièces
+    private static final int[][] PST_PALADIN = {
+            { 1, 2, 3, 3, 2, 1},
+            { 2, 4, 5, 5, 4, 2},
+            { 3, 5, 6, 6, 5, 3},
+            { 3, 5, 6, 6, 5, 3},
+            { 2, 4, 5, 5, 4, 2},
+            { 1, 2, 3, 3, 2, 1}
+    };
+    private static final int[][] PST_LICORNE = {
+            { 0, 0, 1, 1, 0, 0},
+            { 0, 2, 3, 3, 2, 0},
+            { 1, 3, 4, 4, 3, 1},
+            { 1, 3, 4, 4, 3, 1},
+            { 0, 2, 3, 3, 2, 0},
+            { 0, 0, 1, 1, 0, 0}
+    };
 
-        final int N = 200;
-        Random rnd = new Random();
-        String meilleurPlacement = simpleHeuristicPlacement(); // backup si rien de mieux
-        int meilleurScore = Integer.MIN_VALUE;
+    private static final String[] BLACK_FORMATIONS = {
+            // Base
+            "C1/B2/C2/D1/E2/F2",
+            // Formation « Central »
+            "D1/B1/C2/D2/E2/F2",
+            // Formation « Agressive à gauche »
+            "B1/A2/B2/C2/E1/F2",
+            // Formation « Agressive à droite »
+            "F1/F2/E2/D2/B1/C2",
+            // Formation « Écartée » : pousse sur les ailes
+            "C1/A2/C2/F2/E2/D1",
+    };
 
-        for (int iter = 0; iter < N; iter++) {
-            // Choisir une licorne parmi les 12 cases
-            String licorne = autorise.get(rnd.nextInt(autorise.size()));
-
-            // Choisir 5 paladins distincts sur le reste
-            Set<String> rest = new HashSet<>(autorise);
-            rest.remove(licorne);
-            List<String> restList = new ArrayList<>(rest);
-            Collections.shuffle(restList, rnd);
-            List<String> paladins = restList.subList(0, 5);
-
-            // Construire la chaîne de placement
-            StringBuilder sb = new StringBuilder(licorne);
-            for (String p : paladins) sb.append("/").append(p);
-            String placement = sb.toString();
-
-            // Évaluer par Minimax profondeur 2
-            EscampeBoard copie = new EscampeBoard();
-            copie.getBoard();
-            copie.appliquerCoup(placement, couleur);
-            int score = minimax(copie, 3, Integer.MIN_VALUE, Integer.MAX_VALUE, false);
-
-            if (score > meilleurScore) {
-                meilleurScore = score;
-                meilleurPlacement = placement;
-            }
-        }
-
-        return meilleurPlacement;
-    }
-
-    /** Heuristique défensive simple par défaut */
-    private String simpleHeuristicPlacement() {
-        boolean bas = board.coteChoisi(couleur).equals("bas");
-        String licorne = bas ? "C1" : "C6";
-        String p1 = bas ? "B1" : "B6";
-        String p2 = bas ? "D1" : "D6";
-        String p3 = bas ? "B2" : "B5";
-        String p4 = bas ? "D2" : "D5";
-        String p5 = bas ? "C2" : "C5";
-        return String.join("/", licorne, p1, p2, p3, p4, p5);
-    }
-
-    @Override
-    public String choixMouvement() {
-        System.out.println("------------------------------------------------------");
-        if (!this.initalized) {
-            this.initalized = true;
-            String placement = getPlacementInitial();
-            System.out.println("intialisation : " + placement);
-            boolean success = board.appliquerCoup(placement, couleur);
-            System.out.println("coup appliqué : " + success);
-            return placement;
-        }
-        board.afficher();
-        List<String> coupsPossibles = board.getCoupsPossibles(couleur, dernierMouvementEnnemi);
-        if (coupsPossibles.isEmpty()) return "E";
-
-        String meilleurCoup = coupsPossibles.get(0);
-        int meilleurScore = Integer.MIN_VALUE;
-
-        for (String coup : coupsPossibles) {
-            EscampeBoard copie = board.copie();
-            copie.appliquerCoup(coup, couleur);
-            int score = minimax(copie, profondeurMax - 1, Integer.MIN_VALUE, Integer.MAX_VALUE, false);
-
-            if (score > meilleurScore) { // si meilleur score on prend cette branche
-                meilleurScore = score;
-                meilleurCoup = coup;
-            }
-        }
-
-        board.appliquerCoup(meilleurCoup, couleur);
-        return meilleurCoup;
-    }
-
-    private int minimax(EscampeBoard plateau, int profondeur, int alpha, int beta, boolean maximisant) {
-        if (profondeur == 0 || plateau.estPartieTerminee()) {
-            return evaluerPositionAvancee(plateau);
-        }
-
-        if (maximisant) {
-            int maxEval = Integer.MIN_VALUE;
-            List<String> coups = plateau.getCoupsPossibles(couleur, dernierMouvementEnnemi);
-
-            for (String coup : coups) {
-                EscampeBoard copie = plateau.copie();
-                copie.appliquerCoup(coup, couleur);
-                int eval = minimax(copie, profondeur - 1, alpha, beta, false);
-                maxEval = Math.max(maxEval, eval);
-                alpha = Math.max(alpha, eval);
-                if (beta <= alpha) break;
-            }
-            return maxEval;
-        } else {
-            int minEval = Integer.MAX_VALUE;
-            List<String> coups = plateau.getCoupsPossibles(-couleur, dernierMouvementEnnemi);
-
-            for (String coup : coups) {
-                EscampeBoard copie = plateau.copie();
-                copie.appliquerCoup(coup, -couleur);
-                int eval = minimax(copie, profondeur - 1, alpha, beta, true);
-                minEval = Math.min(minEval, eval);
-                beta = Math.min(beta, eval);
-                if (beta <= alpha) break;
-            }
-            return minEval;
-        }
-    }
-
-    private int[] trouverLicorneEnnemie(EscampeBoard plateau) {
-        for (int i = 0; i < EscampeBoard.HAUTEUR; i++) {
-            for (int j = 0; j < EscampeBoard.LARGEUR; j++) {
-                if (plateau.getBoard()[i][j] == (couleur == EscampeBoard.BLANC ?
-                        EscampeBoard.LICORNENOIRE : EscampeBoard.LICORNEBLANCHE)) {
-                    return new int[]{i, j};
-                }
-            }
-        }
-        return null;
-    }
-
-    private int evaluerControleCentral(EscampeBoard plateau) {
-        int score = 0;
-        int[][] zonesCentrales = {{2,2}, {2,3}, {3,2}, {3,3}};
-        for (int[] pos : zonesCentrales) {
-            int piece = plateau.getBoard()[pos[0]][pos[1]];
-            if (piece != EscampeBoard.VIDE) {
-                score += (piece * couleur > 0) ? 3 : -3;
-            }
-        }
-        return score;
-    }
-
-    private int distanceVersLicorne(EscampeBoard plateau, int[] posLicorneEnnemie) {
-        int minDistance = Integer.MAX_VALUE;
-        int[][] board = plateau.getBoard();
-
-        // Type de paladin à rechercher selon la couleur
-        int paladinType = (couleur == EscampeBoard.BLANC) ? EscampeBoard.PALADINBLANC : EscampeBoard.PALADINNOIR;
-
-        for (int i = 0; i < EscampeBoard.HAUTEUR; i++) {
-            for (int j = 0; j < EscampeBoard.LARGEUR; j++) {
-                if (board[i][j] == paladinType) {
-                    // Calcul distance de Manhattan
-                    int distance = Math.abs(i - posLicorneEnnemie[0]) + Math.abs(j - posLicorneEnnemie[1]);
-                    minDistance = Math.min(minDistance, distance);
-                }
-            }
-        }
-
-        return (minDistance == Integer.MAX_VALUE) ? 20 : minDistance; // 20 = valeur de repli
-    }
-
-    // Modification dans evaluerPositionAvancee()
-    private int evaluerPositionAvancee(EscampeBoard plateau) {
-        int score = 0;
-        int[][] board = plateau.getBoard();
-
-        // Valeur des pièces
-        for (int i = 0; i < EscampeBoard.HAUTEUR; i++) {
-            for (int j = 0; j < EscampeBoard.LARGEUR; j++) {
-                int piece = board[i][j];
-                if (piece != EscampeBoard.VIDE) {
-                    // Attribution de valeurs (Licorne > Paladin)
-                    int valeur = (Math.abs(piece) == 2) ? 100 : 10;
-                    score += (piece * couleur > 0) ? valeur : -valeur;
-                }
-            }
-        }
-
-        // Distance à la licorne ennemie
-        int[] posLicorneEnnemie = trouverLicorneEnnemie(plateau);
-        if (posLicorneEnnemie != null) {
-            int distance = distanceVersLicorne(plateau, posLicorneEnnemie);
-            score += (30 - distance * 3); // +30 points si distance=0, décroît linéairement
-        }
-
-        // Contrôle des cases centrales
-        score += evaluerControleCentral(plateau);
-
-        return score;
-    }
+    /* ============================== */
+    /* Initialisation et gestion du jeu */
+    /* ============================== */
 
     @Override
     public void initJoueur(int mycolour) {
@@ -252,7 +88,6 @@ public class IA implements IJoueur {
         System.out.println("coup appliqué : " + success);
     }
 
-
     @Override
     public void declareLeVainqueur(int colour) {
         System.out.println("Le vainqueur est : " + (colour == BLANC ? "Blanc" : "Noir"));
@@ -268,4 +103,356 @@ public class IA implements IJoueur {
         return this.couleur;
     }
 
+    /* ============================== */
+    /* Placement initial */
+    /* ============================== */
+
+    // Heuristique de placement qui utilise minmax
+    public String getPlacementInitial() {
+        EscampeBoard plateauDeBase = board.copie();
+        int nbPieces = 0;
+        for (int i = 0; i < EscampeBoard.HAUTEUR; i++) {
+            for (int j = 0; j < EscampeBoard.LARGEUR; j++) {
+                if (plateauDeBase.getBoard()[i][j] != EscampeBoard.VIDE) {
+                    nbPieces++;
+                }
+            }
+        }
+        boolean premier = (nbPieces == 0);
+
+        if (premier) {
+            // Placement par défaut si pièces NOIRES parmi formations aléatoires
+            if (couleur == NOIR) {
+                return BLACK_FORMATIONS[random.nextInt(BLACK_FORMATIONS.length)];
+            }
+            // Par défaut
+            return "C1/B2/C2/D1/E2/F2";
+        } else {
+            boolean bas = board.coteChoisi(couleur).equals("bas");
+            int[] lignes = bas ? new int[]{1,2} : new int[]{6,5};
+            List<String> autorise = collectEmptyPositions(plateauDeBase, lignes);
+
+            String meilleurCoup = simpleHeuristicPlacementForSide(bas ? "bas" : "haut");
+            int meilleurScore = Integer.MIN_VALUE;
+
+            for (int it = 0; it < N_INIT; it++) {
+                String placement = randomPlacement(autorise, 6);
+                EscampeBoard sim = plateauDeBase.copie();
+                sim.appliquerCoup(placement, couleur);
+                int score = minimax(sim, PROF_INIT, Integer.MIN_VALUE, Integer.MAX_VALUE, false);
+                if (score > meilleurScore) {
+                    meilleurScore = score;
+                    meilleurCoup = placement;
+                }
+            }
+            return meilleurCoup;
+            // return "A6/D6/E6/B5/C6/D5";
+        }
+    }
+
+    // Heuristique stratégique défensive utilisée comme fallback
+    private String simpleHeuristicPlacementForSide(String side) {
+        boolean bas = side.equals("bas");
+        String licorne = bas ? "C1" : "C6";
+        String p1 = bas ? "B1" : "B6";
+        String p2 = bas ? "D1" : "D6";
+        String p3 = bas ? "B2" : "B5";
+        String p4 = bas ? "D2" : "D5";
+        String p5 = bas ? "C2" : "C5";
+        return String.join("/", licorne, p1, p2, p3, p4, p5);
+    }
+
+    /* ============================== */
+    /* Choix de mouvement */
+    /* ============================== */
+
+    @Override
+    public String choixMouvement() {
+        System.out.println("------------------------------------------------------");
+        if (!this.initialized) {
+            this.initialized = true;
+            String placement = getPlacementInitial();
+            System.out.println("intialisation : " + placement);
+            boolean success = board.appliquerCoup(placement, couleur);
+            System.out.println("coup appliqué : " + success);
+            return placement;
+        }
+        board.afficher();
+        List<String> coupsPossibles = board.getCoupsPossibles(couleur, dernierMouvementEnnemi);
+        if (coupsPossibles.isEmpty()) return "E";
+
+        Collections.shuffle(coupsPossibles, random);
+
+        String meilleurCoup = coupsPossibles.get(0);
+        int meilleurScore = Integer.MIN_VALUE;
+
+        for (String coup : coupsPossibles) {
+            EscampeBoard copie = board.copie();
+            copie.appliquerCoup(coup, couleur);
+            int score = minimax(copie, profondeurMax - 1, Integer.MIN_VALUE, Integer.MAX_VALUE, false);
+
+            if (score > meilleurScore) { // si meilleur score on prend cette branche
+                meilleurScore = score;
+                meilleurCoup = coup;
+            }
+        }
+
+        board.appliquerCoup(meilleurCoup, couleur);
+        return meilleurCoup;
+    }
+
+    private List<String> collectEmptyPositions(EscampeBoard board, int[] lignes) {
+        List<String> autorise = new ArrayList<>();
+        for (char c = 'A'; c <= 'F'; c++) {
+            for (int l : lignes) {
+                if (board.getBoard()[l-1][c-'A'] == EscampeBoard.VIDE) {
+                    autorise.add("" + c + l);
+                }
+            }
+        }
+        return autorise;
+    }
+
+    private String randomPlacement(List<String> positions, int count) {
+        Set<String> used = new HashSet<>();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < count; i++) {
+            String pick;
+            do {
+                pick = positions.get(random.nextInt(positions.size()));
+            } while (used.contains(pick));
+            used.add(pick);
+            if (i > 0) sb.append("/");
+            sb.append(pick);
+        }
+        return sb.toString();
+    }
+
+    /* ============================== */
+    /* Algorithme Minimax avec alpha-beta */
+    /* ============================== */
+
+    private int minimax(EscampeBoard plateau, int profondeur, int alpha, int beta, boolean maximisant) {
+        if (profondeur == 0 || plateau.estPartieTerminee()) {
+            return evaluerPositionAvancee(plateau);
+        }
+
+        if (maximisant) {
+            int maxEval = Integer.MIN_VALUE;
+            List<String> coups = plateau.getCoupsPossibles(couleur, dernierMouvementEnnemi);
+
+            /*int[] myLic = trouverMaLicorne(plateau);
+            if (myLic != null) {
+                String licStr = coordToString(myLic[1], myLic[0]);
+                int centreI = EscampeBoard.HAUTEUR/2 -1, centreJ = EscampeBoard.LARGEUR/2 -1;
+                coups.sort((m1, m2) -> {
+                    boolean c1 = m1.startsWith(licStr + "-");
+                    boolean c2 = m2.startsWith(licStr + "-");
+                    if (c1 != c2) return c1 ? -1 : 1;
+                    String[] s1 = m1.split("-"); String[] s2 = m2.split("-");
+                    String d1 = s1[1], d2 = s2[1];
+                    int col1 = d1.charAt(0) - 'A', row1 = d1.charAt(1) - '1';
+                    int col2 = d2.charAt(0) - 'A', row2 = d2.charAt(1) - '1';
+                    int dist1 = Math.abs(row1 - centreI) + Math.abs(col1 - centreJ);
+                    int dist2 = Math.abs(row2 - centreI) + Math.abs(col2 - centreJ);
+                    return Integer.compare(dist1, dist2);
+                });
+            }*/
+
+            for (String coup : coups) {
+                EscampeBoard copie = plateau.copie();
+                copie.appliquerCoup(coup, couleur);
+                int eval = minimax(copie, profondeur - 1, alpha, beta, false);
+                maxEval = Math.max(maxEval, eval);
+                alpha = Math.max(alpha, eval);
+                if (beta <= alpha) break;
+            }
+            return maxEval;
+        } else {
+            int minEval = Integer.MAX_VALUE;
+            List<String> coups = plateau.getCoupsPossibles(-couleur, dernierMouvementEnnemi);
+
+            for (String coup : coups) {
+                EscampeBoard copie = plateau.copie();
+                copie.appliquerCoup(coup, -couleur);
+                int eval = minimax(copie, profondeur - 1, alpha, beta, true);
+                minEval = Math.min(minEval, eval);
+                beta = Math.min(beta, eval);
+                if (beta <= alpha) break;
+            }
+            return minEval;
+        }
+    }
+
+    /* ============================== */
+    /* Heuristiques principales pour évaluation */
+    /* ============================== */
+
+    /**
+     * Fonction d'évaluation principale combinant
+     * - Valeur brute des pièces (10/100)
+     * - Piece-Square Tables
+     * - Distance quadratique à la licorne ennemie
+     * - Contrôle de zone élargi
+     * - Mobilité relative
+     * - Sécurité de la licorne
+     */
+    private int evaluerPositionAvancee(EscampeBoard plateau) {
+        int score = 0;
+        int[][] board = plateau.getBoard();
+
+        // Valeur des pièces
+        for (int i = 0; i < EscampeBoard.HAUTEUR; i++) {
+            for (int j = 0; j < EscampeBoard.LARGEUR; j++) {
+                int piece = board[i][j];
+                if (piece != EscampeBoard.VIDE) {
+                    // Attribution de valeurs (Licorne > Paladin)
+                    int valeur = (Math.abs(piece) == 2) ? 100 : 10;
+                    score += (piece * couleur > 0) ? valeur : -valeur;
+                    score += pstValue(piece, i, j);
+                }
+            }
+        }
+
+        // Distance quadratique à la licorne ennemie
+        int[] posLicorneEnnemie = trouverLicorneEnnemie(plateau);
+        if (posLicorneEnnemie != null) {
+            int distance = distanceVersLicorne(plateau, posLicorneEnnemie);
+            score += Math.max(0, 50 - 5 * distance * distance); // Quand on est très proche, le bonus explose, mais chute très vite pour de grandes distances.
+        }
+
+        // Contrôle de zone élargi
+        score += evaluerControleZone(plateau);
+
+        // Mobilité relative
+        score += evaluerMobilite(plateau);
+
+        // Sécurité de ma licorne
+        score += evaluerSecuriteLicorne(plateau);
+
+        // Contrôle des cases centrales
+        // score += evaluerControleCentral(plateau);
+
+        return score;
+    }
+
+    // Heuristique de mobilité : différentiel des coups possibles
+    private int evaluerMobilite(EscampeBoard plateau) {
+        List<String> coupsPerso = plateau.getCoupsPossibles(couleur, dernierMouvementEnnemi);
+        List<String> coupsAdversaire = plateau.getCoupsPossibles(-couleur, dernierMouvementEnnemi);
+        return (coupsPerso.size() - coupsAdversaire.size()) * 5;
+    }
+
+    //  Calcul du nombre d'échappatoires (coups possibles) pour la licorne
+    private int nombreEchappatoiresLicorne(EscampeBoard plateau) {
+        int[] myLic = trouverMaLicorne(plateau);
+        if (myLic == null) return 0;
+        String licStr = coordToString(myLic[1], myLic[0]);
+        int count = 0;
+        for (String m : plateau.getCoupsPossibles(couleur, dernierMouvementEnnemi)) {
+            if (m.startsWith(licStr + "-")) count++;
+        }
+        return count;
+    }
+
+    //  Heuristique de sécurité : pénalise une licorne avec peu de fuites
+    private int evaluerSecuriteLicorne(EscampeBoard plateau) {
+        int fuites = nombreEchappatoiresLicorne(plateau);
+        if (fuites <= 2) return -50;
+        if (fuites <= 4) return -20;
+        return fuites * 2;
+    }
+
+    // Heuristique de contrôle de zone : cases à distance ≤2 du centre
+    private int evaluerControleZone(EscampeBoard plateau) {
+        int score = 0;
+        int centreI = EscampeBoard.HAUTEUR/2 - 1;
+        int centreJ = EscampeBoard.LARGEUR/2 - 1;
+        for (int i = 0; i < EscampeBoard.HAUTEUR; i++) {
+            for (int j = 0; j < EscampeBoard.LARGEUR; j++) {
+                int d = Math.abs(i - centreI) + Math.abs(j - centreJ);
+                if (d <= 2 && plateau.getBoard()[i][j] != EscampeBoard.VIDE) {
+                    int w = (d <= 1 ? 3 : 1);
+                    int signe = plateau.getBoard()[i][j] * couleur > 0 ? 1 : -1;
+                    score += signe * w;
+                }
+            }
+        }
+        return score;
+    }
+
+    // Piece-Square Table : valeur positionnelle des pièces, tenir compte de la position sur le plateau
+    private int pstValue(int piece, int i, int j) {
+        if (Math.abs(piece) == 1)
+            return (piece * couleur > 0 ? 1 : -1) * PST_PALADIN[i][j];
+        if (Math.abs(piece) == 2)
+            return (piece * couleur > 0 ? 1 : -1) * PST_LICORNE[i][j] * 5;
+        return 0;
+    }
+
+    /* ========================================= */
+    /* Fonctions utilitaires */
+    /* ========================================= */
+
+    // Localise la licorne ennemie sur le plateau
+    private int[] trouverLicorneEnnemie(EscampeBoard plateau) {
+        for (int i = 0; i < EscampeBoard.HAUTEUR; i++) {
+            for (int j = 0; j < EscampeBoard.LARGEUR; j++) {
+                if (plateau.getBoard()[i][j] == (couleur == EscampeBoard.BLANC
+                        ? EscampeBoard.LICORNENOIRE
+                        : EscampeBoard.LICORNEBLANCHE)) {
+                    return new int[]{i, j};
+                }
+            }
+        }
+        return null;
+    }
+
+    // Localise ma propre licorne sur le plateau
+    private int[] trouverMaLicorne(EscampeBoard plateau) {
+        int target = (couleur == EscampeBoard.BLANC
+                ? EscampeBoard.LICORNEBLANCHE : EscampeBoard.LICORNENOIRE);
+        for (int i = 0; i < EscampeBoard.HAUTEUR; i++) {
+            for (int j = 0; j < EscampeBoard.LARGEUR; j++) {
+                if (plateau.getBoard()[i][j] == target) return new int[]{i, j};
+            }
+        }
+        return null;
+    }
+
+    // Convertit des indices (col,row) en notation plateau ("A1", "B3", ...)
+    private String coordToString(int col, int row) {
+        return String.valueOf((char)('A' + col)) + (row + 1);
+    }
+
+    // Calcule la distance de Manhattan d'un paladin à la position donnée
+    private int distanceVersLicorne(EscampeBoard plateau, int[] posLicorne) {
+        int minDist = Integer.MAX_VALUE;
+        int paladinType = (couleur == EscampeBoard.BLANC)
+                ? EscampeBoard.PALADINBLANC
+                : EscampeBoard.PALADINNOIR;
+        int[][] b = plateau.getBoard();
+        for (int i = 0; i < EscampeBoard.HAUTEUR; i++) {
+            for (int j = 0; j < EscampeBoard.LARGEUR; j++) {
+                if (b[i][j] == paladinType) {
+                    int d = Math.abs(i - posLicorne[0]) + Math.abs(j - posLicorne[1]);
+                    minDist = Math.min(minDist, d);
+                }
+            }
+        }
+        return (minDist == Integer.MAX_VALUE) ? 20 : minDist;
+    }
+
+    // Ancienne heuristique de contrôle central (non utilisée)
+    private int evaluerControleCentral(EscampeBoard plateau) {
+        int score = 0;
+        int[][] zonesCentrales = {{2,2}, {2,3}, {3,2}, {3,3}};
+        for (int[] pos : zonesCentrales) {
+            int piece = plateau.getBoard()[pos[0]][pos[1]];
+            if (piece != EscampeBoard.VIDE) {
+                score += (piece * couleur > 0) ? 3 : -3;
+            }
+        }
+        return score;
+    }
 }
