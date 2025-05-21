@@ -14,18 +14,15 @@ import java.util.Set;
 
 public class IA implements IJoueur {
 
-    /* ============================== */
-    /* Constantes et Variables */
-    /* ============================== */
     private static final int N_INIT = 200;  // Nombre d'itérations pour le placement initial
-    private static final int PROF_INIT = 3; // Profondeur pour l'algorithme minimax
-    private int profondeurMax = PROF_INIT; // Profondeur maximale actuelle pour minimax
+    private static final int PROF_INIT = 3; // Profondeur minimax
+    private int profondeurMax = PROF_INIT; // Profondeur max minimax
 
-    private int couleur; // Couleur du joueur (BLANC ou NOIR)
-    private EscampeBoard board; // Représentation du plateau de jeu
+    private int couleur;
+    private EscampeBoard board;
     private final Random random = new Random();
-    private boolean initialized = false; // Indique si le placement initial a été effectué
-    private String dernierMouvementEnnemi = ""; // Dernier mouvement de l'adversaire
+    private boolean initialized = false; // premier coup ?
+    private String dernierMouvementEnnemi = "";
 
     // Piece-Square Tables pour la valeur positionnelle des pièces
     private static final int[][] PST_PALADIN = {
@@ -48,13 +45,13 @@ public class IA implements IJoueur {
     private static final String[] BLACK_FORMATIONS = {
             // Base
             "C1/B2/C2/D1/E2/F2",
-            // Formation « Central »
+            // Formation Central
             "D1/B1/C2/D2/E2/F2",
-            // Formation « Agressive à gauche »
+            // Formation Agressive à gauche
             "B1/A2/B2/C2/E1/F2",
-            // Formation « Agressive à droite »
+            // Formation Agressive à droite
             "F1/F2/E2/D2/B1/C2",
-            // Formation « Écartée » : pousse sur les ailes
+            // Formation Écartée
             "C1/A2/C2/F2/E2/D1",
     };
 
@@ -66,7 +63,6 @@ public class IA implements IJoueur {
     public void initJoueur(int mycolour) {
         this.couleur = mycolour;
         this.board = new EscampeBoard();
-        // Si c'est le premier joueur (Blanc), on initialise un plateau vide
         if (mycolour == BLANC) {
             for (int i = 0; i < EscampeBoard.HAUTEUR; i++) {
                 for (int j = 0; j < EscampeBoard.LARGEUR; j++) {
@@ -95,17 +91,13 @@ public class IA implements IJoueur {
 
     @Override
     public String binoName() {
-        return "Deepseek";
+        return "Best player :)";
     }
 
     @Override
     public int getNumJoueur() {
         return this.couleur;
     }
-
-    /* ============================== */
-    /* Placement initial */
-    /* ============================== */
 
     // Heuristique de placement qui utilise minmax
     public String getPlacementInitial() {
@@ -122,11 +114,7 @@ public class IA implements IJoueur {
 
         if (premier) {
             // Placement par défaut si pièces NOIRES parmi formations aléatoires
-            if (couleur == NOIR) {
-                return BLACK_FORMATIONS[random.nextInt(BLACK_FORMATIONS.length)];
-            }
-            // Par défaut
-            return "C1/B2/C2/D1/E2/F2";
+            return BLACK_FORMATIONS[random.nextInt(BLACK_FORMATIONS.length)];
         } else {
             boolean bas = board.coteChoisi(couleur).equals("bas");
             int[] lignes = bas ? new int[]{1,2} : new int[]{6,5};
@@ -228,10 +216,6 @@ public class IA implements IJoueur {
         return sb.toString();
     }
 
-    /* ============================== */
-    /* Algorithme Minimax avec alpha-beta */
-    /* ============================== */
-
     private int minimax(EscampeBoard plateau, int profondeur, int alpha, int beta, boolean maximisant) {
         if (profondeur == 0 || plateau.estPartieTerminee()) {
             return evaluerPositionAvancee(plateau);
@@ -284,10 +268,6 @@ public class IA implements IJoueur {
         }
     }
 
-    /* ============================== */
-    /* Heuristiques principales pour évaluation */
-    /* ============================== */
-
     /**
      * Fonction d'évaluation principale combinant
      * - Valeur brute des pièces (10/100)
@@ -318,7 +298,7 @@ public class IA implements IJoueur {
         int[] posLicorneEnnemie = trouverLicorneEnnemie(plateau);
         if (posLicorneEnnemie != null) {
             int distance = distanceVersLicorne(plateau, posLicorneEnnemie);
-            score += Math.max(0, 50 - 5 * distance * distance); // Quand on est très proche, le bonus explose, mais chute très vite pour de grandes distances.
+            score += Math.max(0, 50 - 5 * distance * distance); // Quand on est très proche
         }
 
         // Contrôle de zone élargi
@@ -381,7 +361,7 @@ public class IA implements IJoueur {
         return score;
     }
 
-    // Piece-Square Table : valeur positionnelle des pièces, tenir compte de la position sur le plateau
+    // valeur positionnelle des pièces
     private int pstValue(int piece, int i, int j) {
         if (Math.abs(piece) == 1)
             return (piece * couleur > 0 ? 1 : -1) * PST_PALADIN[i][j];
@@ -390,11 +370,6 @@ public class IA implements IJoueur {
         return 0;
     }
 
-    /* ========================================= */
-    /* Fonctions utilitaires */
-    /* ========================================= */
-
-    // Localise la licorne ennemie sur le plateau
     private int[] trouverLicorneEnnemie(EscampeBoard plateau) {
         for (int i = 0; i < EscampeBoard.HAUTEUR; i++) {
             for (int j = 0; j < EscampeBoard.LARGEUR; j++) {
@@ -420,7 +395,7 @@ public class IA implements IJoueur {
         return null;
     }
 
-    // Convertit des indices (col,row) en notation plateau ("A1", "B3", ...)
+    // indices (col,row) en notation plateau ("A1", "B3", ...)
     private String coordToString(int col, int row) {
         return String.valueOf((char)('A' + col)) + (row + 1);
     }
@@ -443,7 +418,7 @@ public class IA implements IJoueur {
         return (minDist == Integer.MAX_VALUE) ? 20 : minDist;
     }
 
-    // Ancienne heuristique de contrôle central (non utilisée)
+    // Ancienne heuristique de contrôle central
     private int evaluerControleCentral(EscampeBoard plateau) {
         int score = 0;
         int[][] zonesCentrales = {{2,2}, {2,3}, {3,2}, {3,3}};
