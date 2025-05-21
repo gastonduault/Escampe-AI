@@ -55,10 +55,6 @@ public class IA implements IJoueur {
             "C1/A2/C2/F2/E2/D1",
     };
 
-    /* ============================== */
-    /* Initialisation et gestion du jeu */
-    /* ============================== */
-
     @Override
     public void initJoueur(int mycolour) {
         this.couleur = mycolour;
@@ -149,10 +145,6 @@ public class IA implements IJoueur {
         String p5 = bas ? "C2" : "C5";
         return String.join("/", licorne, p1, p2, p3, p4, p5);
     }
-
-    /* ============================== */
-    /* Choix de mouvement */
-    /* ============================== */
 
     @Override
     public String choixMouvement() {
@@ -298,7 +290,7 @@ public class IA implements IJoueur {
         int[] posLicorneEnnemie = trouverLicorneEnnemie(plateau);
         if (posLicorneEnnemie != null) {
             int distance = distanceVersLicorne(plateau, posLicorneEnnemie);
-            score += Math.max(0, 50 - 5 * distance * distance); // Quand on est très proche
+            score += Math.max(0, 50 - 5 * distance * distance);
         }
 
         // Contrôle de zone élargi
