@@ -55,10 +55,7 @@ public class IA implements IJoueur {
             "C1/A2/C2/F2/E2/D1",
     };
 
-    /* ============================== */
-    /* Initialisation et gestion du jeu */
-    /* ============================== */
-
+    // Initialisation et gestion du jeu
     @Override
     public void initJoueur(int mycolour) {
         this.couleur = mycolour;
@@ -150,10 +147,7 @@ public class IA implements IJoueur {
         return String.join("/", licorne, p1, p2, p3, p4, p5);
     }
 
-    /* ============================== */
-    /* Choix de mouvement */
-    /* ============================== */
-
+    // Choix de mouvement
     @Override
     public String choixMouvement() {
         System.out.println("------------------------------------------------------");
@@ -224,25 +218,6 @@ public class IA implements IJoueur {
         if (maximisant) {
             int maxEval = Integer.MIN_VALUE;
             List<String> coups = plateau.getCoupsPossibles(couleur, dernierMouvementEnnemi);
-
-            /*int[] myLic = trouverMaLicorne(plateau);
-            if (myLic != null) {
-                String licStr = coordToString(myLic[1], myLic[0]);
-                int centreI = EscampeBoard.HAUTEUR/2 -1, centreJ = EscampeBoard.LARGEUR/2 -1;
-                coups.sort((m1, m2) -> {
-                    boolean c1 = m1.startsWith(licStr + "-");
-                    boolean c2 = m2.startsWith(licStr + "-");
-                    if (c1 != c2) return c1 ? -1 : 1;
-                    String[] s1 = m1.split("-"); String[] s2 = m2.split("-");
-                    String d1 = s1[1], d2 = s2[1];
-                    int col1 = d1.charAt(0) - 'A', row1 = d1.charAt(1) - '1';
-                    int col2 = d2.charAt(0) - 'A', row2 = d2.charAt(1) - '1';
-                    int dist1 = Math.abs(row1 - centreI) + Math.abs(col1 - centreJ);
-                    int dist2 = Math.abs(row2 - centreI) + Math.abs(col2 - centreJ);
-                    return Integer.compare(dist1, dist2);
-                });
-            }*/
-
             for (String coup : coups) {
                 EscampeBoard copie = plateau.copie();
                 copie.appliquerCoup(coup, couleur);
@@ -255,7 +230,6 @@ public class IA implements IJoueur {
         } else {
             int minEval = Integer.MAX_VALUE;
             List<String> coups = plateau.getCoupsPossibles(-couleur, dernierMouvementEnnemi);
-
             for (String coup : coups) {
                 EscampeBoard copie = plateau.copie();
                 copie.appliquerCoup(coup, -couleur);
@@ -268,15 +242,6 @@ public class IA implements IJoueur {
         }
     }
 
-    /**
-     * Fonction d'évaluation principale combinant
-     * - Valeur brute des pièces (10/100)
-     * - Piece-Square Tables
-     * - Distance quadratique à la licorne ennemie
-     * - Contrôle de zone élargi
-     * - Mobilité relative
-     * - Sécurité de la licorne
-     */
     private int evaluerPositionAvancee(EscampeBoard plateau) {
         int score = 0;
         int[][] board = plateau.getBoard();
@@ -361,7 +326,6 @@ public class IA implements IJoueur {
         return score;
     }
 
-    // valeur positionnelle des pièces
     private int pstValue(int piece, int i, int j) {
         if (Math.abs(piece) == 1)
             return (piece * couleur > 0 ? 1 : -1) * PST_PALADIN[i][j];
